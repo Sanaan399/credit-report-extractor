@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Credit Report Extractor</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --border: #d9dde3;
+    --text: #1c1f23;
+    --muted: #5f6873;
+    --accent: #2f6feb;
+    --accent-text: #ffffff;
+    --ok-bg: #e7f6ec;   --ok-border: #9ad3ae;   --ok-text: #14532d;
+    --warn-bg: #fdf4e3; --warn-border: #e8c98a; --warn-text: #6b4708;
+    --err-bg: #fdecec;  --err-border: #eaa5a5;  --err-text: #7f1d1d;
+    --log-bg: #12151a;  --log-text: #d7dde5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171c; --panel: #1b1f26; --border: #2c323b;
+      --text: #e6e9ee; --muted: #9aa4b2; --accent: #4d8bff;
+      --ok-bg: #14301f;   --ok-border: #2f6b45;   --ok-text: #9fe7b8;
+      --warn-bg: #33280e; --warn-border: #7a5f20; --warn-text: #f0d194;
+      --err-bg: #35191a;  --err-border: #7d3336;  --err-text: #f2b0b0;
+      --log-bg: #0d1014;  --log-text: #d7dde5;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 32px 20px 64px;
+    background: var(--bg); color: var(--text);
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 840px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 24px; font-size: 14px; }
+  .panel {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px; margin-bottom: 16px;
+  }
+  label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; }
+  .hint { font-weight: 400; color: var(--muted); font-size: 12px; }
+  input[type=text], input[type=password] {
+    width: 100%; padding: 9px 11px; font: inherit; font-size: 14px;
+    color: var(--text); background: var(--bg);
+    border: 1px solid var(--border); border-radius: 7px;
+  }
+  input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .field { margin-bottom: 16px; }
+  .field:last-child { margin-bottom: 0; }
+  .row { display: flex; gap: 8px; }
+  .row input { flex: 1; min-width: 0; }
+  button {
+    font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+    padding: 9px 16px; border-radius: 7px;
+    border: 1px solid var(--border); background: var(--panel); color: var(--text);
+  }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  .checks { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 4px; }
+  .check { display: flex; align-items: center; gap: 7px; font-size: 14px; }
+  .check input { width: 16px; height: 16px; }
+  .check label { margin: 0; font-weight: 400; }
+  .actions { display: flex; gap: 10px; align-items: center; margin-top: 4px; flex-wrap: wrap; }
+  .box { border-radius: 8px; padding: 12px 14px; margin-top: 12px; font-size: 14px; border: 1px solid; }
+  .box.ok   { background: var(--ok-bg);   border-color: var(--ok-border);   color: var(--ok-text); }
+  .box.warn { background: var(--warn-bg); border-color: var(--warn-border); color: var(--warn-text); }
+  .box.err  { background: var(--err-bg);  border-color: var(--err-border);  color: var(--err-text); }
+  .box p { margin: 0 0 6px; }
+  .box p:last-child { margin-bottom: 0; }
+  .cost { font-size: 19px; font-weight: 700; }
+  pre.log {
+    background: var(--log-bg); color: var(--log-text);
+    border-radius: 8px; padding: 14px; margin: 0;
+    height: 340px; overflow-y: auto; white-space: pre-wrap; word-break: break-word;
+    font: 12.5px/1.5 ui-monospace, "Cascadia Code", Consolas, monospace;
+  }
+  .spin { display: inline-block; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .hidden { display: none; }
+  .status { font-size: 14px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Credit Report Extractor</h1>
+  <p class="sub">Reads business credit report PDFs and writes one spreadsheet row per report.</p>
+
+  <div class="box err hidden" id="offline" style="margin-bottom:16px">
+    <p><strong>This page isn't connected to the extractor.</strong></p>
+    <p>It looks like <code>index.html</code> was opened directly from the folder. The page
+       needs the local helper running so it can read your folders and do the extraction.</p>
+    <p style="margin-top:8px"><strong>Close this tab</strong>, then double-click
+       <code>start.bat</code> (Windows) or run <code>python app.py</code> — a new tab will
+       open automatically and everything will work.</p>
+  </div>
+
+  <div class="panel" id="mainPanel">
+    <div class="field">
+      <label for="key">Anthropic API key
+        <span class="hint" id="keyHint"></span>
+      </label>
+      <div class="row">
+        <input type="password" id="key" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
+        <button type="button" id="toggleKey">Show</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="input">Folder containing the PDFs
+        <span class="hint">— PDFs directly in this folder only, not sub-folders</span>
+      </label>
+      <div class="row">
+        <input type="text" id="input" spellcheck="false">
+        <button type="button" data-browse="input">Browse…</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="output">Folder to save results into
+        <span class="hint">— use a new folder per batch so results don't overwrite each other</span>
+      </label>
+      <div class="row">
+        <input type="text" id="output" spellcheck="false">
+        <button type="button" data-browse="output">Browse…</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="checks">
+        <span class="check">
+          <input type="checkbox" id="skipValidate">
+          <label for="skipValidate">Skip cross-check (cheaper, but no accuracy flags)</label>
+        </span>
+        <span class="check">
+          <input type="checkbox" id="force">
+          <label for="force">Re-do reports already extracted</label>
+        </span>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button type="button" id="checkBtn">Check &amp; estimate cost</button>
+      <button type="button" class="primary" id="runBtn" disabled>Run</button>
+      <span class="status" id="status"></span>
+    </div>
+
+    <div id="report"></div>
+  </div>
+
+  <div class="panel hidden" id="logPanel">
+    <label>Progress</label>
+    <pre class="log" id="log"></pre>
+    <div class="actions" style="margin-top:12px">
+      <button type="button" id="openBtn" class="hidden">Open results folder</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let preflightOk = false;
+let logCursor = 0;
+let poller = null;
+
+function post(path, body) {
+  return fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body || {})
+  }).then(r => r.json());
+}
+
+function setStatus(text, busy) {
+  $('status').innerHTML = busy ? '<span class="spin">◐</span> ' + text : text;
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+}
+
+// --- defaults ---------------------------------------------------------
+// Doubles as the "is the helper actually running?" check: if this fetch
+// fails, the page was almost certainly opened straight from the folder
+// (file://) instead of being served by app.py.
+fetch('/api/defaults')
+  .then(r => r.json())
+  .then(d => {
+    $('input').value = d.input_dir;
+    $('output').value = d.output_dir;
+    if (d.has_env_key) {
+      $('key').placeholder = 'Using key already set on this computer — leave blank';
+      $('keyHint').textContent = '— optional, a key is already configured';
+    }
+  })
+  .catch(() => {
+    $('offline').classList.remove('hidden');
+    $('mainPanel').style.opacity = '.45';
+    $('mainPanel').style.pointerEvents = 'none';
+  });
+
+// --- folder pickers ---------------------------------------------------
+document.querySelectorAll('[data-browse]').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const target = btn.dataset.browse;
+    const original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Choose…';
+    setStatus('Folder picker open — it may be behind this window.', true);
+    try {
+      const res = await post('/api/browse', { initial: $(target).value });
+      if (res.path) {
+        $(target).value = res.path;
+        invalidate();
+        setStatus('', false);
+      } else {
+        setStatus(res.reason || 'No folder chosen.', false);
+      }
+    } catch (e) {
+      setStatus('Could not reach the local helper — is app.py still running?', false);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = original;
+    }
+  });
+});
+
+$('toggleKey').addEventListener('click', () => {
+  const el = $('key');
+  const showing = el.type === 'text';
+  el.type = showing ? 'password' : 'text';
+  $('toggleKey').textContent = showing ? 'Show' : 'Hide';
+});
+
+function invalidate() {
+  preflightOk = false;
+  $('runBtn').disabled = true;
+  $('report').innerHTML = '';
+}
+['key', 'input', 'output'].forEach(id => $(id).addEventListener('input', invalidate));
+['skipValidate', 'force'].forEach(id => $(id).addEventListener('change', invalidate));
+
+// --- pre-flight -------------------------------------------------------
+function payload() {
+  return {
+    api_key: $('key').value,
+    input_dir: $('input').value,
+    output_dir: $('output').value,
+    skip_validate: $('skipValidate').checked,
+    force: $('force').checked
+  };
+}
+
+$('checkBtn').addEventListener('click', async () => {
+  invalidate();
+  setStatus('Checking folders and estimating cost…', true);
+  let d;
+  try { d = await post('/api/preflight', payload()); }
+  catch (e) { setStatus('Could not reach the local server.', false); return; }
+  setStatus('', false);
+
+  let html = '';
+  if (d.errors && d.errors.length) {
+    html += '<div class="box err"><p><strong>Cannot run yet</strong></p>' +
+      d.errors.map(e => '<p>' + esc(e) + '</p>').join('') + '</div>';
+  }
+  if (d.warnings && d.warnings.length) {
+    html += '<div class="box warn">' +
+      d.warnings.map(w => '<p>' + esc(w) + '</p>').join('') + '</div>';
+  }
+  if (d.pdf_count) {
+    const formats = Object.entries(d.format_counts || {})
+      .map(([k, v]) => esc(k) + ': ' + v).join(' · ');
+    const cost = d.estimated_cost == null ? 'unknown'
+      : '$' + d.estimated_cost.toFixed(2);
+    html += '<div class="box ok">' +
+      '<p>Found <strong>' + d.pdf_count + '</strong> PDF(s), ' + d.total_pages + ' pages — ' + formats + '</p>' +
+      '<p>Will process <strong>' + d.to_process + '</strong> report(s)' +
+        (d.include_cross_check ? ' with cross-check' : ', extraction only') + '.</p>' +
+      '<p class="cost">Estimated cost: ' + cost + '</p>' +
+      '<p style="font-size:12px;opacity:.85">Estimate only — the exact figure is shown after the run.</p>' +
+      '</div>';
+  }
+  $('report').innerHTML = html;
+
+  preflightOk = d.ok && d.to_process > 0;
+  $('runBtn').disabled = !preflightOk;
+  if (d.ok && d.to_process === 0) {
+    setStatus('Everything here is already extracted — tick "Re-do reports" to run again.', false);
+  }
+});
+
+// --- run --------------------------------------------------------------
+$('runBtn').addEventListener('click', async () => {
+  if (!preflightOk) return;
+  $('runBtn').disabled = true;
+  $('checkBtn').disabled = true;
+  $('openBtn').classList.add('hidden');
+  $('logPanel').classList.remove('hidden');
+  $('log').textContent = '';
+  logCursor = 0;
+  setStatus('Running…', true);
+
+  const res = await post('/api/run', payload());
+  if (res.error) {
+    setStatus(res.error, false);
+    $('runBtn').disabled = false;
+    $('checkBtn').disabled = false;
+    return;
+  }
+  poller = setInterval(poll, 700);
+  poll();
+});
+
+async function poll() {
+  const d = await fetch('/api/status?since=' + logCursor).then(r => r.json());
+  if (d.lines && d.lines.length) {
+    const log = $('log');
+    const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 40;
+    log.textContent += d.lines.join('\n') + '\n';
+    logCursor = d.total;
+    if (atBottom) log.scrollTop = log.scrollHeight;
+  }
+  if (d.status === 'done' || d.status === 'failed') {
+    clearInterval(poller);
+    $('checkBtn').disabled = false;
+    $('openBtn').classList.remove('hidden');
+    invalidate();
+    if (d.status === 'failed') {
+      setStatus('Run failed — see the log above.', false);
+    } else {
+      const s = d.summary || {};
+      const bits = [];
+      if (s.cost != null) bits.push('cost $' + s.cost.toFixed(4));
+      if (s.flags != null) bits.push(s.flags + ' review flag(s)');
+      if (s.errors && s.errors.length) bits.push(s.errors.length + ' failure(s)');
+      setStatus('Done — ' + (bits.join(' · ') || 'finished') + '.', false);
+    }
+  }
+}
+
+$('openBtn').addEventListener('click', () => post('/api/open-output', { output_dir: $('output').value }));
+</script>
+</body>
+</html>

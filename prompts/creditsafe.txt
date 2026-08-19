@@ -1,0 +1,5 @@
+This is a Creditsafe-format report (typically a European company). Look for
+"Safe Number", a Risk Score with a band description like "71-100 Very Low
+Risk", a Credit Limit, and a "Key Financials" table with multiple years of
+Turnover / Pre Tax Profit / Shareholder's Funds figures. Directors and
+shareholders are listed under "Directors/Shareholders".

@@ -1,0 +1,23 @@
+# Your API key - never commit this
+.env
+
+# Results (regenerated on every run)
+output/
+
+# Input PDFs - these are your own documents, not code
+reports/*.pdf
+reports/*.PDF
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Editor / OS / Office junk
+.claude/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+~$*

@@ -1,0 +1,18 @@
+This report uses a 1-100 point international credit-risk score with letter
+rating bands (A+/A/BB/B/C/NR) explained under "BASIS OF CREDIT RATING" or
+"CREDIT RECOMMENDATION". That section is a generic lookup table (each row
+gives a point range and its letter code) -- it does not print this specific
+company's letter rating on its own. Find "POINTS ALLOCATED: NN" for this
+company, match NN against that table's point ranges, and use the
+corresponding letter as credit_rating and rating_band. This is reading a
+printed table, not guessing -- always fill in credit_rating this way when
+points_allocated and the table are both present. risk_level is the separate
+plain-English/word label (e.g. "LOW", "Medium") shown near "Risk Level" --
+do not put that word in credit_rating, and do not put the letter rating in
+risk_level.
+
+Registration details are under "REGISTRY DATA" or "Key Facts".
+Management/shareholder info is under "MANAGEMENT" / "SHAREHOLDER
+INFORMATION". Note: this PDF's underlying text can have labels and values
+misaligned from a two-column layout -- read the page visually rather than
+assuming raw left-to-right text order is correct.

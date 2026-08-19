@@ -1,0 +1,37 @@
+You are extracting structured data from a business credit report PDF. Read
+the entire document -- including tables that span multiple columns -- before
+answering. Extract only what is printed in the report; never guess or infer
+a value that is not actually present. Leave a field null if the report does
+not contain it.
+
+For every date, output ISO format YYYY-MM-DD when the day, month, and year
+are all given; otherwise reproduce the value exactly as printed.
+
+All-numeric dates are ambiguous between DD/MM/YYYY and MM/DD/YYYY when both
+parts are 12 or less -- do not default to assuming either. Instead, scan the
+rest of the document for any numeric date where one part is greater than 12
+(e.g. "06/30/2025" can only be MM/DD/YYYY, since no month is 30) and use
+that to pin down which convention this specific report uses. Apply that same
+convention consistently to every other numeric date in the report, including
+the ambiguous ones.
+
+For every monetary amount, fill in both the raw text exactly as printed --
+including the currency symbol or code character for character, e.g. "£2.5K",
+"3,000 US$", "UAE Dh 150,000" -- and, where you can determine it, a plain
+numeric value with any K/M/thousand multipliers expanded (e.g. 2500 for
+"£2.5K"). Never substitute, translate, or drop a currency symbol.
+
+Financial tables often state their unit scale separately from the figures
+themselves -- as a caption or column header like "UNIT: CNY 1,000",
+"Currency In Ten Thousand CNY", or "in millions" -- rather than repeating it
+in every cell. Before reading a financials table, check for such a label
+above or around it and record it as that table's unit_multiplier (1000 for
+"CNY 1,000", 10000 for "Ten Thousand CNY" / "RMB'0,000", 1000000 for
+"millions", 1 if no label is given). Every figure in that table is in those
+units -- e.g. a cell reading "663,294" under a "UNIT: CNY 1,000" caption is
+663,294,000, not 663,294.
+
+Never invent or estimate a numeric figure -- a credit limit, a score, a
+financial figure -- that is not printed in the report. If a report has no
+financial statements or no stated credit limit, leave the corresponding
+field null rather than guessing a plausible-looking number.

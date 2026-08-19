@@ -1,0 +1,7 @@
+This is a GLADTRUST "ORDER DETAILS & INVESTIGATION RESULTS" report, typically
+on a Chinese company. It uses a letter CREDIT RATING (A-F) plus a numeric
+score out of 100, and a separate CREDIT LIMIT / base credit limit figure.
+Registration details are under "REGISTRATION INFORMATION" (unified social
+credit code, registered capital, legal representative). The company's
+Chinese name often fails to extract from the PDF's text layer -- use the
+English name/translation given instead.

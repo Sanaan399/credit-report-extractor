@@ -1,0 +1,2 @@
+The exact report format could not be automatically identified. Extract
+whatever of the standard fields you can find; leave the rest null.
